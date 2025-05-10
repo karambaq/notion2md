@@ -45,8 +45,8 @@ annotation_map = {
 
 
 # Mentions
-def _mention_link(content, url):
-    return f"([{content}]({url}])"
+def _mention_link(content, url, title=None):
+    return f"([{content}]({url}))"
 
 
 def user(information: dict):
@@ -65,6 +65,10 @@ def database(information: dict):
     return _mention_link(information["content"], information["url"])
 
 
+def link_mention(information: dict):
+    return _mention_link(information["content"], information["url"])
+
+
 def mention_information(payload: dict):
     information = dict()
     if payload["href"]:
@@ -76,10 +80,20 @@ def mention_information(payload: dict):
     else:
         information["content"] = payload["plain_text"]
 
+    title = payload.get("mention", {}).get("link_mention", {}).get("title")
+    if title:
+        information["content"] = title
+
     return information
 
 
-mention_map = {"user": user, "page": page, "database": database, "date": date}
+mention_map = {
+    "user": user,
+    "page": page,
+    "database": database,
+    "date": date,
+    "link_mention": link_mention,
+}
 
 
 def richtext_word_converter(richtext: dict) -> str:
@@ -90,9 +104,7 @@ def richtext_word_converter(richtext: dict) -> str:
     elif richtext["type"] == "mention":
         mention_type = richtext["mention"]["type"]
         if mention_type in mention_map:
-            outcome_word = mention_map[mention_type](
-                mention_information(richtext)
-            )
+            outcome_word = mention_map[mention_type](mention_information(richtext))
     else:
         if richtext["href"]:
             outcome_word = text_link(richtext["text"])
